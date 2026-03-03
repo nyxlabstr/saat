@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyx Pro - Ultimate Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=JetBrains+Mono:wght@100;200;300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        :root {
+            --md-primary: #D0BCFF;
+            --md-surface: #0F0F12;
+            --md-on-surface: #E6E1E5;
+            --md-surface-container: rgba(29, 27, 32, 0.6);
+            --transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body.light {
+            --md-surface: #F3F3F7;
+            --md-on-surface: #1C1B1F;
+            --md-surface-container: rgba(255, 255, 255, 0.6);
+            --md-primary: #6750A4;
+        }
+
+        body.theme-ocean { --md-primary: #4391cf; }
+        body.theme-forest { --md-primary: #6abf8c; }
+        body.theme-rose { --md-primary: #e07aab; }
+
+        body {
+            font-family: 'Tomorrow', sans-serif;
+            background-color: var(--md-surface);
+            color: var(--md-on-surface);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: var(--transition);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .tomorrow { font-family: 'Tomorrow', sans-serif; }
+
+        .glass-panel {
+            background: var(--md-surface-container);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 40px;
+        }
+
+        .icon-btn {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--transition);
+            background: var(--md-surface-container);
+            backdrop-filter: blur(10px);
+        }
+        .icon-btn:hover { transform: scale(1.1); background: var(--md-primary); color: var(--md-surface); }
+
+        .nav-item { cursor: pointer; transition: var(--transition); opacity: 0.5; }
+        .nav-item.active { opacity: 1; }
+        .nav-pill {
+            width: 56px; height: 32px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+        }
+        .nav-item.active .nav-pill { background-color: var(--md-primary); color: var(--md-surface); }
+
+        .page {
+            display: none; opacity: 0; transform: translateY(20px);
+            transition: var(--transition);
+            flex-grow: 1; flex-direction: column; overflow-y: auto;
+            padding: 24px; z-index: 10;
+        }
+        .page.active { display: flex; opacity: 1; transform: translateY(0); }
+
+        .m3-switch {
+            width: 44px; height: 22px; border-radius: 11px; background-color: #49454f;
+            position: relative; cursor: pointer; transition: 0.3s;
+        }
+        .m3-switch.on { background-color: var(--md-primary); }
+        .m3-switch::before {
+            content: ""; position: absolute; top: 3px; left: 3px;
+            width: 16px; height: 16px; background: white; border-radius: 50%;
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .m3-switch.on::before { transform: translateX(22px); }
+
+        .timer-ring-path {
+            fill: none; stroke: var(--md-primary); stroke-width: 2;
+            stroke-linecap: round; transition: stroke-dashoffset 0.3s linear;
+        }
+
+        .alarm-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(40px);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .settings-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 8px 16px;
+            color: var(--md-on-surface);
+            width: 100px;
+            text-align: center;
+            outline: none;
+            font-family: 'Tomorrow', sans-serif;
+        }
+        
+        .settings-input:focus { border-color: var(--md-primary); }
+        
+        .sound-option {
+            padding: 12px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.3s;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 500;
+        }
+        .sound-option.active {
+            background: var(--md-primary);
+            color: var(--md-surface);
+            border-color: transparent;
+        }
+
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- Alarm Bildirim Ekranı -->
+    <div id="alarm-ring-overlay" class="alarm-overlay">
+        <div class="relative mb-12">
+            <div class="w-40 h-40 rounded-full border-2 border-[var(--md-primary)] animate-ping absolute inset-0 opacity-50"></div>
+            <div class="w-40 h-40 rounded-full bg-[var(--md-primary)] flex items-center justify-center relative shadow-[0_0_50px_var(--md-primary)]">
+                <span class="material-symbols-outlined text-6xl text-black">notifications_active</span>
+            </div>
+        </div>
+        <h2 id="alarm-msg" class="text-2xl font-light tracking-[0.4em] uppercase opacity-50 mb-4 tomorrow">Süre Doldu</h2>
+        <div id="alarm-ring-time" class="text-9xl font-semibold mb-20 tomorrow tracking-tighter">00:00</div>
+        <button onclick="stopAlarm()" class="px-20 py-6 bg-white text-black rounded-full font-bold tracking-[0.2em] uppercase hover:scale-105 active:scale-95 transition-all shadow-2xl tomorrow text-xs">Kapat</button>
+    </div>
+
+    <!-- Üst Kontrol Barı -->
+    <header class="h-20 flex items-center justify-between px-8 z-[100] relative">
+        <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full bg-[var(--md-primary)] animate-pulse"></div>
+            <span class="text-[9px] uppercase tracking-[0.4em] font-medium opacity-50 tomorrow">Nyx Pro Ultimate</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="fullscreen-btn" class="icon-btn" onclick="toggleFullscreen()"><span class="material-symbols-outlined">fullscreen</span></div>
+            <div id="settings-toggle-btn" class="icon-btn" onclick="toggleSettings()"><span class="material-symbols-outlined">tune</span></div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col overflow-hidden relative">
+        
+        <!-- SAAT -->
+        <section id="p-clock" class="page active items-center justify-center">
+            <div class="text-center">
+                <p id="date-text" class="text-[var(--md-primary)] font-semibold tracking-[0.5em] mb-8 uppercase text-[10px] tomorrow"></p>
+                <h1 id="time-text" class="text-[12rem] font-bold tracking-[-0.05em] leading-none mb-4 tomorrow">00:00</h1>
+                <div class="flex items-center justify-center gap-4 opacity-30">
+                    <span id="sec-text" class="text-2xl tomorrow font-light tracking-[0.3em]">00</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ALARM -->
+        <section id="p-alarm" class="page max-w-2xl mx-auto w-full">
+            <div class="flex justify-between items-center mb-12">
+                <h2 class="text-4xl font-light tomorrow uppercase tracking-widest">Alarmlar</h2>
+                <div onclick="openAlarmPicker()" class="w-14 h-14 glass-panel flex items-center justify-center cursor-pointer hover:bg-[var(--md-primary)] hover:text-black transition-all">
+                    <span class="material-symbols-outlined">add</span>
+                </div>
+            </div>
+            <div id="alarm-container" class="space-y-4 pb-24"></div>
+        </section>
+
+        <!-- ZAMANLAYICI (TIMER) -->
+        <section id="p-timer" class="page items-center justify-center">
+            <div class="relative w-80 h-80 mb-16">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,0.05)" stroke-width="2" fill="none"/>
+                    <circle id="timer-ring" class="timer-ring-path" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="0"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <input type="text" id="timer-display" class="bg-transparent border-none outline-none text-7xl font-semibold tomorrow text-center w-full" value="10:00" onfocus="pauseTimer()">
+                </div>
+            </div>
+            <div class="flex gap-6">
+                <button onclick="resetTimer()" class="px-10 py-4 glass-panel text-[9px] uppercase font-bold tracking-[0.2em] tomorrow">Sıfırla</button>
+                <button id="timer-btn" onclick="toggleTimer()" class="px-14 py-4 bg-[var(--md-primary)] text-black rounded-full text-[9px] uppercase font-bold tracking-[0.2em] tomorrow">Başlat</button>
+            </div>
+        </section>
+
+        <!-- KRONOMETRE -->
+        <section id="p-stopwatch" class="page items-center justify-center">
+            <div id="sw-display" class="text-[7rem] font-bold tomorrow mb-24 tracking-tighter">00:00<span class="text-2xl opacity-20 font-light">.00</span></div>
+            <div class="flex gap-10 items-center">
+                <button onclick="resetSW()" class="icon-btn !w-16 !h-16"><span class="material-symbols-outlined">replay</span></button>
+                <button id="sw-main-btn" onclick="toggleSW()" class="w-24 h-24 bg-[var(--md-primary)] text-black rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform">
+                    <span id="sw-icon" class="material-symbols-outlined text-4xl">play_arrow</span>
+                </button>
+                <button onclick="lapSW()" class="icon-btn !w-16 !h-16"><span class="material-symbols-outlined">timer</span></button>
+            </div>
+            <div id="sw-laps" class="w-full max-w-sm mt-16 max-h-40 overflow-y-auto space-y-3 px-4 tomorrow"></div>
+        </section>
+
+        <!-- POMODORO -->
+        <section id="p-pomodoro" class="page items-center justify-center">
+            <div class="relative w-80 h-80 mb-16">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" stroke="rgba(255,255,255,0.05)" stroke-width="2" fill="none"/>
+                    <circle id="pomo-ring" class="timer-ring-path" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="0"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <span id="pomo-status" class="text-[9px] uppercase tracking-[0.4em] opacity-40 mb-3 tomorrow font-semibold">Odaklanma</span>
+                    <div id="pomo-display" class="text-7xl font-semibold tomorrow">25:00</div>
+                </div>
+            </div>
+            <div class="flex gap-6">
+                <button onclick="resetPomo()" class="px-10 py-4 glass-panel text-[9px] uppercase font-bold tracking-[0.2em] tomorrow">Sıfırla</button>
+                <button id="pomo-btn" onclick="togglePomo()" class="px-14 py-4 bg-[var(--md-primary)] text-black rounded-full text-[9px] uppercase font-bold tracking-[0.2em] tomorrow">Başlat</button>
+            </div>
+        </section>
+
+        <!-- AYARLAR -->
+        <section id="p-settings" class="page max-w-xl mx-auto w-full">
+            <div class="flex items-center gap-4 mb-12">
+                <button onclick="nav('clock', null)" class="icon-btn"><span class="material-symbols-outlined">arrow_back</span></button>
+                <h2 class="text-4xl font-light tomorrow uppercase tracking-widest">Ayarlar</h2>
+            </div>
+            <div class="space-y-6 pb-24">
+                <div class="p-8 glass-panel">
+                    <p class="text-[9px] font-bold tracking-[0.3em] opacity-30 mb-6 uppercase tomorrow">Uyarı Tonu</p>
+                    <div class="flex flex-wrap gap-3" id="sound-list"></div>
+                </div>
+
+                <div class="p-8 glass-panel">
+                    <p class="text-[9px] font-bold tracking-[0.3em] opacity-30 mb-8 uppercase tomorrow">Pomodoro Süreleri (DK)</p>
+                    <div class="flex gap-8">
+                        <div class="flex flex-col gap-2">
+                            <span class="text-[9px] opacity-50 uppercase tomorrow tracking-widest">Odaklanma</span>
+                            <input type="number" id="cfg-pomo-work" class="settings-input" value="25" onchange="updatePomoConfig()">
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-[9px] opacity-50 uppercase tomorrow tracking-widest">Mola</span>
+                            <input type="number" id="cfg-pomo-break" class="settings-input" value="5" onchange="updatePomoConfig()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8 glass-panel flex justify-between items-center">
+                    <div>
+                        <p class="font-medium tomorrow tracking-wide uppercase text-sm">Karanlık Mod</p>
+                        <p class="text-[9px] opacity-40 uppercase tracking-[0.1em] mt-2 tomorrow">Göz dostu arayüz</p>
+                    </div>
+                    <div id="dark-switch" class="m3-switch on" onclick="toggleDarkMode()"></div>
+                </div>
+
+                <div class="p-8 glass-panel">
+                    <p class="text-[9px] font-bold tracking-[0.3em] opacity-30 mb-8 uppercase tomorrow">Renk Teması</p>
+                    <div class="flex gap-6">
+                        <div onclick="setTheme('default')" class="w-12 h-12 rounded-2xl bg-[#D0BCFF] cursor-pointer hover:scale-110 transition-transform shadow-lg"></div>
+                        <div onclick="setTheme('rose')" class="w-12 h-12 rounded-2xl bg-[#e07aab] cursor-pointer hover:scale-110 transition-transform"></div>
+                        <div onclick="setTheme('ocean')" class="w-12 h-12 rounded-2xl bg-[#4391cf] cursor-pointer hover:scale-110 transition-transform"></div>
+                        <div onclick="setTheme('forest')" class="w-12 h-12 rounded-2xl bg-[#6abf8c] cursor-pointer hover:scale-110 transition-transform"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Alt Navigasyon -->
+    <nav class="h-28 bg-transparent flex items-center justify-center gap-4 px-4 z-50 relative">
+        <div class="glass-panel flex items-center px-4 py-3 gap-1 sm:gap-2">
+            <div id="nav-clock" class="nav-item active flex flex-col items-center" onclick="nav('clock', this)">
+                <div class="nav-pill"><span class="material-symbols-outlined">schedule</span></div>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Saat</span>
+            </div>
+            <div id="nav-alarm" class="nav-item flex flex-col items-center" onclick="nav('alarm', this)">
+                <div class="nav-pill"><span class="material-symbols-outlined">notifications</span></div>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Alarm</span>
+            </div>
+            <div id="nav-timer" class="nav-item flex flex-col items-center" onclick="nav('timer', this)">
+                <div class="nav-pill"><span class="material-symbols-outlined">hourglass_empty</span></div>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Zaman</span>
+            </div>
+            <div id="nav-stopwatch" class="nav-item flex flex-col items-center" onclick="nav('stopwatch', this)">
+                <div class="nav-pill"><span class="material-symbols-outlined">timer_10_alt_1</span></div>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Krono</span>
+            </div>
+            <div id="nav-pomodoro" class="nav-item flex flex-col items-center" onclick="nav('pomodoro', this)">
+                <div class="nav-pill"><span class="material-symbols-outlined">center_focus_strong</span></div>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Pomodoro</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Alarm Modal -->
+    <div id="alarm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-3xl hidden z-[200] items-center justify-center p-6 text-white">
+        <div class="w-full max-w-sm flex flex-col items-center">
+            <span class="text-[10px] font-bold tracking-[0.5em] opacity-30 uppercase mb-12 tomorrow">Vakit Seçin</span>
+            <input type="time" id="alarm-input" class="text-9xl font-semibold bg-transparent border-none outline-none mb-16 tomorrow text-center text-[var(--md-primary)]">
+            <div class="flex gap-8 w-full">
+                <button onclick="closeAlarmPicker()" class="flex-grow py-6 text-[9px] font-bold uppercase tracking-[0.2em] opacity-40 tomorrow">İptal</button>
+                <button onclick="addAlarm()" class="flex-grow py-6 bg-white text-black rounded-full text-[9px] font-bold uppercase tracking-[0.2em] tomorrow">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Ses dosyaları music klasöründen çekilecek şekilde güncellendi
+        const sounds = [
+            { id: 'dijital', name: 'Dijital', url: 'music/dijital.mp3' },
+            { id: 'zen', name: 'Zen', url: 'music/zen.mp3' },
+            { id: 'space', name: 'Uzay', url: 'music/space.mp3' },
+            { id: 'classic', name: 'Klasik', url: 'music/classic.mp3' }
+        ];
+
+        let state = {
+            alarms: JSON.parse(localStorage.getItem('nyx_alarms_v4')) || [],
+            swTime: 0, swRunning: false, swInt: null,
+            timerTime: 600, timerTotal: 600, timerRunning: false, timerInt: null,
+            pomoWorkMin: parseInt(localStorage.getItem('nyx_pomo_work')) || 25,
+            pomoBreakMin: parseInt(localStorage.getItem('nyx_pomo_break')) || 5,
+            pomoTime: 0, pomoRunning: false, pomoInt: null, isBreak: false,
+            currentPage: 'clock',
+            selectedSound: localStorage.getItem('nyx_sound') || 'dijital'
+        };
+
+        const audioPlayer = new Audio();
+        audioPlayer.loop = true;
+
+        let scene, camera, renderer, particles = [], particleSpeed = 1;
+
+        function initVisuals() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(0.08, 6, 6);
+            for(let i=0; i<85; i++) {
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color(getComputedStyle(document.body).getPropertyValue('--md-primary').trim() || "#D0BCFF"),
+                    transparent: true,
+                    opacity: Math.random() * 0.35 + 0.1
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(Math.random()*22-11, Math.random()*22-11, Math.random()*12-16);
+                mesh.userData = { vel: new THREE.Vector3(Math.random()*0.022-0.011, Math.random()*0.022-0.011, 0) };
+                scene.add(mesh);
+                particles.push(mesh);
+            }
+            camera.position.z = 5;
+            animateVisuals();
+        }
+
+        function animateVisuals() {
+            requestAnimationFrame(animateVisuals);
+            particles.forEach(p => {
+                p.position.x += p.userData.vel.x * particleSpeed;
+                p.position.y += p.userData.vel.y * particleSpeed;
+                if(Math.abs(p.position.x) > 11) p.userData.vel.x *= -1;
+                if(Math.abs(p.position.y) > 7) p.userData.vel.y *= -1;
+            });
+            renderer.render(scene, camera);
+        }
+
+        function nav(pageId, el) {
+            state.currentPage = pageId;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('p-' + pageId).classList.add('active');
+            
+            if(el) el.classList.add('active');
+            else {
+                const navEl = document.getElementById('nav-' + pageId);
+                if(navEl) navEl.classList.add('active');
+            }
+        }
+
+        function toggleSettings() {
+            state.currentPage === 'settings' ? nav('clock', null) : nav('settings', null);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2,'0');
+            const m = now.getMinutes().toString().padStart(2,'0');
+            const s = now.getSeconds().toString().padStart(2,'0');
+            document.getElementById('time-text').innerText = `${h}:${m}`;
+            document.getElementById('sec-text').innerText = s;
+            document.getElementById('date-text').innerText = now.toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'short'}).toUpperCase();
+            
+            state.alarms.forEach(a => {
+                if(a.active && a.time === `${h}:${m}` && !a.fired) {
+                    a.fired = true;
+                    triggerAlarmOverlay(a.time, "Alarm");
+                    setTimeout(() => a.fired = false, 61000);
+                }
+            });
+        }
+
+        // --- TIMER ---
+        function toggleTimer() {
+            const btn = document.getElementById('timer-btn');
+            const input = document.getElementById('timer-display');
+            
+            if(state.timerRunning) {
+                pauseTimer();
+            } else {
+                const parts = input.value.split(':');
+                if(!state.timerInt) {
+                    const mins = parseInt(parts[0]) || 0;
+                    const secs = parseInt(parts[1]) || 0;
+                    state.timerTime = mins * 60 + secs;
+                    state.timerTotal = state.timerTime;
+                }
+                if(state.timerTime <= 0) return;
+                state.timerRunning = true;
+                btn.innerText = "Durdur";
+                state.timerInt = setInterval(() => {
+                    state.timerTime--;
+                    const m = Math.floor(state.timerTime/60).toString().padStart(2,'0');
+                    const s = (state.timerTime%60).toString().padStart(2,'0');
+                    input.value = `${m}:${s}`;
+                    document.getElementById('timer-ring').style.strokeDashoffset = 283 - (state.timerTime/state.timerTotal * 283);
+                    if(state.timerTime <= 0) {
+                        pauseTimer();
+                        triggerAlarmOverlay("00:00", "Zamanlayıcı");
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            clearInterval(state.timerInt);
+            state.timerInt = null;
+            state.timerRunning = false;
+            document.getElementById('timer-btn').innerText = "Devam Et";
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            state.timerTime = 600;
+            state.timerTotal = 600;
+            document.getElementById('timer-display').value = "10:00";
+            document.getElementById('timer-btn').innerText = "Başlat";
+            document.getElementById('timer-ring').style.strokeDashoffset = 0;
+        }
+
+        // --- POMODORO ---
+        function updatePomoConfig() {
+            state.pomoWorkMin = parseInt(document.getElementById('cfg-pomo-work').value) || 25;
+            state.pomoBreakMin = parseInt(document.getElementById('cfg-pomo-break').value) || 5;
+            localStorage.setItem('nyx_pomo_work', state.pomoWorkMin);
+            localStorage.setItem('nyx_pomo_break', state.pomoBreakMin);
+            if(!state.pomoRunning) resetPomo();
+        }
+
+        function togglePomo() {
+            const btn = document.getElementById('pomo-btn');
+            if(state.pomoRunning) {
+                clearInterval(state.pomoInt);
+                btn.innerText = "Devam Et";
+                particleSpeed = 1;
+            } else {
+                if(state.pomoTime <= 0) state.pomoTime = (state.isBreak ? state.pomoBreakMin : state.pomoWorkMin) * 60;
+                particleSpeed = 0.35;
+                state.pomoInt = setInterval(() => {
+                    state.pomoTime--;
+                    const m = Math.floor(state.pomoTime/60).toString().padStart(2,'0');
+                    const s = (state.pomoTime%60).toString().padStart(2,'0');
+                    document.getElementById('pomo-display').innerText = `${m}:${s}`;
+                    const total = (state.isBreak ? state.pomoBreakMin : state.pomoWorkMin) * 60;
+                    document.getElementById('pomo-ring').style.strokeDashoffset = 283 - (state.pomoTime/total * 283);
+                    if(state.pomoTime <= 0) {
+                        clearInterval(state.pomoInt);
+                        state.isBreak = !state.isBreak;
+                        state.pomoTime = (state.isBreak ? state.pomoBreakMin : state.pomoWorkMin) * 60;
+                        document.getElementById('pomo-status').innerText = state.isBreak ? "Mola" : "Odaklanma";
+                        triggerAlarmOverlay(state.isBreak ? "Mola Vakti" : "Çalışma Vakti", "Pomodoro");
+                        state.pomoRunning = false;
+                        togglePomo();
+                    }
+                }, 1000);
+                btn.innerText = "Durdur";
+            }
+            state.pomoRunning = !state.pomoRunning;
+        }
+
+        function resetPomo() {
+            clearInterval(state.pomoInt);
+            state.pomoRunning = false; state.isBreak = false;
+            state.pomoTime = state.pomoWorkMin * 60;
+            document.getElementById('pomo-display').innerText = `${state.pomoWorkMin.toString().padStart(2,'0')}:00`;
+            document.getElementById('pomo-status').innerText = "Odaklanma";
+            document.getElementById('pomo-btn').innerText = "Başlat";
+            document.getElementById('pomo-ring').style.strokeDashoffset = 0;
+            particleSpeed = 1;
+        }
+
+        // --- ALARMS ---
+        function renderAlarms() {
+            const container = document.getElementById('alarm-container');
+            container.innerHTML = '';
+            state.alarms.forEach((a, i) => {
+                const card = document.createElement('div');
+                card.className = `p-8 glass-panel flex justify-between items-center ${a.active ? '' : 'opacity-20'}`;
+                card.innerHTML = `
+                    <span class="text-5xl font-semibold tomorrow">${a.time}</span>
+                    <div class="flex items-center gap-6">
+                        <div class="m3-switch ${a.active ? 'on' : ''}" onclick="toggleAlarm(${i})"></div>
+                        <span class="material-symbols-outlined opacity-30 cursor-pointer" onclick="delAlarm(${i})">delete</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        function openAlarmPicker() { document.getElementById('alarm-modal').style.display = 'flex'; }
+        function closeAlarmPicker() { document.getElementById('alarm-modal').style.display = 'none'; }
+        function addAlarm() {
+            const val = document.getElementById('alarm-input').value;
+            if(val) state.alarms.push({time: val, active: true, fired: false});
+            state.alarms.sort((a,b) => a.time.localeCompare(b.time));
+            localStorage.setItem('nyx_alarms_v4', JSON.stringify(state.alarms));
+            renderAlarms(); closeAlarmPicker();
+        }
+        function toggleAlarm(i) { state.alarms[i].active = !state.alarms[i].active; localStorage.setItem('nyx_alarms_v4', JSON.stringify(state.alarms)); renderAlarms(); }
+        function delAlarm(i) { state.alarms.splice(i, 1); localStorage.setItem('nyx_alarms_v4', JSON.stringify(state.alarms)); renderAlarms(); }
+
+        // --- UTILS ---
+        function initSoundList() {
+            const list = document.getElementById('sound-list');
+            sounds.forEach(s => {
+                const opt = document.createElement('div');
+                opt.className = `sound-option tomorrow ${state.selectedSound === s.id ? 'active' : ''}`;
+                opt.innerText = s.name;
+                opt.onclick = () => {
+                    state.selectedSound = s.id;
+                    localStorage.setItem('nyx_sound', s.id);
+                    document.querySelectorAll('.sound-option').forEach(el => el.classList.remove('active'));
+                    opt.classList.add('active');
+                    audioPlayer.src = s.url;
+                    audioPlayer.loop = false;
+                    audioPlayer.play();
+                    setTimeout(() => { audioPlayer.pause(); audioPlayer.loop = true; }, 1500);
+                };
+                list.appendChild(opt);
+            });
+        }
+
+        function triggerAlarmOverlay(time, title) {
+            document.getElementById('alarm-msg').innerText = title;
+            document.getElementById('alarm-ring-time').innerText = time;
+            document.getElementById('alarm-ring-overlay').style.display = 'flex';
+            const s = sounds.find(s => s.id === state.selectedSound) || sounds[0];
+            audioPlayer.src = s.url;
+            audioPlayer.play().catch(() => {});
+        }
+
+        function stopAlarm() {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+            document.getElementById('alarm-ring-overlay').style.display = 'none';
+        }
+
+        // --- KRONOMETRE ---
+        function toggleSW() {
+            const btnIcon = document.getElementById('sw-icon');
+            if(state.swRunning) {
+                clearInterval(state.swInt);
+                btnIcon.innerText = 'play_arrow';
+            } else {
+                const start = Date.now() - state.swTime;
+                state.swInt = setInterval(() => {
+                    state.swTime = Date.now() - start;
+                    const ms = state.swTime;
+                    const m = Math.floor(ms/60000).toString().padStart(2,'0');
+                    const s = Math.floor((ms%60000)/1000).toString().padStart(2,'0');
+                    const c = Math.floor((ms%1000)/10).toString().padStart(2,'0');
+                    document.getElementById('sw-display').innerHTML = `${m}:${s}<span class="text-2xl opacity-20 font-light">.${c}</span>`;
+                }, 40);
+                btnIcon.innerText = 'pause';
+            }
+            state.swRunning = !state.swRunning;
+        }
+
+        function resetSW() {
+            clearInterval(state.swInt); state.swTime = 0; state.swRunning = false;
+            document.getElementById('sw-display').innerHTML = `00:00<span class="text-2xl opacity-20 font-light">.00</span>`;
+            document.getElementById('sw-icon').innerText = 'play_arrow';
+            document.getElementById('sw-laps').innerHTML = '';
+        }
+
+        function lapSW() {
+            if(state.swTime === 0) return;
+            const lap = document.createElement('div');
+            lap.className = "p-4 glass-panel flex justify-between text-[10px] mb-2 uppercase tracking-widest";
+            lap.innerHTML = `<span class="opacity-40 font-bold">Tur</span><span class="font-semibold">${document.getElementById('sw-display').innerText}</span>`;
+            document.getElementById('sw-laps').prepend(lap);
+        }
+
+        function setTheme(theme) {
+            document.body.classList.remove('theme-rose', 'theme-ocean', 'theme-forest');
+            if(theme !== 'default') document.body.classList.add('theme-' + theme);
+            const color = getComputedStyle(document.body).getPropertyValue('--md-primary').trim();
+            particles.forEach(p => p.material.color.set(color));
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('light');
+            document.getElementById('dark-switch').classList.toggle('on', !isDark);
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        window.onload = () => {
+            initVisuals();
+            initSoundList();
+            setInterval(updateClock, 1000);
+            updateClock();
+            renderAlarms();
+            resetPomo();
+            const savedTheme = localStorage.getItem('nyx_theme_v2');
+            if(savedTheme) setTheme(savedTheme);
+            document.addEventListener('click', () => { audioPlayer.load(); }, { once: true });
+        };
+    </script>
+</body>
+</html>
