@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyx Pro - Ultimate Edition</title>
+    <title>Nyx Saat - Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=JetBrains+Mono:wght@100;200;300&display=swap" rel="stylesheet">
@@ -72,7 +72,7 @@
         }
         .icon-btn:hover { transform: scale(1.1); background: var(--md-primary); color: var(--md-surface); }
 
-        .nav-item { cursor: pointer; transition: var(--transition); opacity: 0.5; }
+        .nav-item { cursor: pointer; transition: var(--transition); opacity: 0.5; min-width: 64px; }
         .nav-item.active { opacity: 1; }
         .nav-pill {
             width: 56px; height: 32px; border-radius: 16px;
@@ -164,10 +164,13 @@
     </div>
 
     <!-- Üst Kontrol Barı -->
-    <header class="h-20 flex items-center justify-between px-8 z-[100] relative">
-        <div class="flex items-center gap-3">
-            <div class="w-2 h-2 rounded-full bg-[var(--md-primary)] animate-pulse"></div>
-            <span class="text-[9px] uppercase tracking-[0.4em] font-medium opacity-50 tomorrow">Nyx Pro Ultimate</span>
+    <header class="h-24 flex items-center justify-between px-8 z-[100] relative">
+        <div class="flex flex-col">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-[var(--md-primary)] animate-pulse"></div>
+                <span class="text-sm uppercase tracking-[0.3em] font-bold tomorrow">Nyx Saat</span>
+            </div>
+            <span class="text-[8px] uppercase tracking-[0.6em] font-medium opacity-40 tomorrow mt-1 ml-5">with Nyx Labs</span>
         </div>
         <div class="flex items-center gap-3">
             <div id="fullscreen-btn" class="icon-btn" onclick="toggleFullscreen()"><span class="material-symbols-outlined">fullscreen</span></div>
@@ -281,6 +284,14 @@
                     <div id="dark-switch" class="m3-switch on" onclick="toggleDarkMode()"></div>
                 </div>
 
+                <div class="p-8 glass-panel flex justify-between items-center">
+                    <div>
+                        <p class="font-medium tomorrow tracking-wide uppercase text-sm">Bildirimler</p>
+                        <p id="notif-status" class="text-[9px] opacity-40 uppercase tracking-[0.1em] mt-2 tomorrow">İzin Gerekli</p>
+                    </div>
+                    <button onclick="requestNotificationPermission()" class="px-6 py-2 bg-[var(--md-primary)] text-black rounded-full text-[9px] font-bold uppercase tomorrow">İzin Ver</button>
+                </div>
+
                 <div class="p-8 glass-panel">
                     <p class="text-[9px] font-bold tracking-[0.3em] opacity-30 mb-8 uppercase tomorrow">Renk Teması</p>
                     <div class="flex gap-6">
@@ -311,7 +322,7 @@
             </div>
             <div id="nav-stopwatch" class="nav-item flex flex-col items-center" onclick="nav('stopwatch', this)">
                 <div class="nav-pill"><span class="material-symbols-outlined">timer_10_alt_1</span></div>
-                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Krono</span>
+                <span class="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 tomorrow">Kronometre</span>
             </div>
             <div id="nav-pomodoro" class="nav-item flex flex-col items-center" onclick="nav('pomodoro', this)">
                 <div class="nav-pill"><span class="material-symbols-outlined">center_focus_strong</span></div>
@@ -333,7 +344,6 @@
     </div>
 
     <script>
-        // Ses dosyaları music klasöründen çekilecek şekilde güncellendi
         const sounds = [
             { id: 'dijital', name: 'Dijital', url: 'music/dijital.mp3' },
             { id: 'zen', name: 'Zen', url: 'music/zen.mp3' },
@@ -356,6 +366,41 @@
         audioPlayer.loop = true;
 
         let scene, camera, renderer, particles = [], particleSpeed = 1;
+
+        // Bildirim İzni İsteme Fonksiyonu
+        async function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                console.log("Bu tarayıcı bildirimleri desteklemiyor.");
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            updateNotificationStatus(permission);
+        }
+
+        function updateNotificationStatus(permission) {
+            const statusEl = document.getElementById('notif-status');
+            if (permission === 'granted') {
+                statusEl.innerText = 'Aktif';
+                statusEl.classList.remove('opacity-40');
+                statusEl.classList.add('text-green-400');
+            } else if (permission === 'denied') {
+                statusEl.innerText = 'Engellendi';
+                statusEl.classList.add('text-red-400');
+            } else {
+                statusEl.innerText = 'İzin Gerekli';
+            }
+        }
+
+        // Bildirim Gönderme
+        function sendNotification(title, body) {
+            if (Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+                new Notification(title, {
+                    body: body,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1827/1827379.png'
+                });
+            }
+        }
 
         function initVisuals() {
             scene = new THREE.Scene();
@@ -422,6 +467,7 @@
                 if(a.active && a.time === `${h}:${m}` && !a.fired) {
                     a.fired = true;
                     triggerAlarmOverlay(a.time, "Alarm");
+                    sendNotification("Nyx Saat Alarm", `Saat geldi: ${a.time}`);
                     setTimeout(() => a.fired = false, 61000);
                 }
             });
@@ -454,6 +500,7 @@
                     if(state.timerTime <= 0) {
                         pauseTimer();
                         triggerAlarmOverlay("00:00", "Zamanlayıcı");
+                        sendNotification("Zamanlayıcı Doldu", "Süre tamamlandı!");
                     }
                 }, 1000);
             }
@@ -506,6 +553,7 @@
                         state.pomoTime = (state.isBreak ? state.pomoBreakMin : state.pomoWorkMin) * 60;
                         document.getElementById('pomo-status').innerText = state.isBreak ? "Mola" : "Odaklanma";
                         triggerAlarmOverlay(state.isBreak ? "Mola Vakti" : "Çalışma Vakti", "Pomodoro");
+                        sendNotification("Pomodoro", state.isBreak ? "Mola Vakti!" : "Odaklanma Vakti!");
                         state.pomoRunning = false;
                         togglePomo();
                     }
@@ -653,6 +701,7 @@
             resetPomo();
             const savedTheme = localStorage.getItem('nyx_theme_v2');
             if(savedTheme) setTheme(savedTheme);
+            updateNotificationStatus(Notification.permission);
             document.addEventListener('click', () => { audioPlayer.load(); }, { once: true });
         };
     </script>
